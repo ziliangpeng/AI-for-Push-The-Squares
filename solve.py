@@ -194,7 +194,10 @@ class Solver:
         self.path = {}
         self.path[init_status] = ""
 
-    def _push_forward(self, color, towards, original_status, new_status):
+    def _push_forward(self, color, towards, original_status, new_status, colors_in_chain):
+        if color in colors_in_chain:
+            return False # dead loop detected
+        colors_in_chain.add(color)
         # If there are other blocks on the way of the block we want to push, all of them will be pushed forward one step.
         # So we first need to find out all the blocks will be push forward, put them into a stack
 
@@ -212,7 +215,7 @@ class Solver:
             if original_status.get_color_from_position(target_pos): # there is a preceding block
                 preceding_exist = True
                 preceding_color = original_status.get_color_from_position(target_pos)
-                preceding_removed = self._push_forward(preceding_color, towards, original_status, new_status)
+                preceding_removed = self._push_forward(preceding_color, towards, original_status, new_status, colors_in_chain)
             else: # nothing in the way
                 preceding_exist = False
 
@@ -233,7 +236,8 @@ class Solver:
         facing = status.facing(color)
 
         new_status = self.Status()
-        self._push_forward(color, facing, status, new_status)
+        colors_in_chain = set()
+        self._push_forward(color, facing, status, new_status, colors_in_chain)
 
         # copy all the unmoved blocks
         for c in status.colors():
