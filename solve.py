@@ -1,6 +1,7 @@
 import sys
 import string
 from Queue import Queue
+import re
 
 """
     # version 0.1
@@ -43,6 +44,15 @@ from Queue import Queue
 
 PORTAL = 'O'
 DIRECTIONS = 'NEWS'
+CHANGER_PREFIX = 'C'
+DESTINATION_PREFIX = 'D'
+
+VELOCITIES = {
+            'N': (-1, 0),
+            'E': (0, 1),
+            'W': (0, -1),
+            'S': (1, 0)
+        }
 
 class UnsolvableError(Exception):
     pass
@@ -51,25 +61,26 @@ class Solver:
 
     class Board:
         def __init__(self):
-            self.board = [['' for j in range(5)] for i in range(5)]
+            # In input, empty are '' for faster key-typing, in Board representation empty is '.' for better index handling.
+            # (TODO): This hack may be fixed after project is finished
+            self.board = [['.' for j in range(5)] for i in range(5)]
             self.destinations = {}
             self.portals = []
             self.changer = []
 
         def set(self, i, j, thing):
-            assert self.board[i][j] == '' # cannot set twice
+            assert self.board[i][j] == '.' # cannot set twice
             self.board[i][j] = thing
-            if thing[0] == 'D': # A destination
+            if thing[0] == DESTINATION_PREFIX: # A destination
                 color = thing[1]
                 assert color not in self.destinations
                 self.destinations[color] = (i, j)
-            elif thing[0] == 'O':
+            elif thing[0] == PORTAL:
                 self.portals.append((i, j))
-            elif thing[0] == 'C':
+            elif thing[0] == CHANGER_PREFIX:
                 self.changer.append((i, j, thing[1]))
             else:
                 assert False # should not come here
-
 
         def get(self, i, j):
             return self.board[i][j]
@@ -79,6 +90,23 @@ class Solver:
 
         def destination(self, c):
             return self.destinations[c]
+
+        def is_portal(self, pos):
+            return self.board[pos[0]][pos[1]] == PORTAL
+
+        def get_another_portal(self, pos):
+            if pos not in self.portals:
+                raise ValueError()
+            for portal in self.portals:
+                if portal != pos:
+                    return portal
+
+        def get_facing_change_by_position(self, pos):
+            grid = self.board[pos[0]][pos[1]]
+            if grid[0] == CHANGER_PREFIX:
+                return grid[1]
+            else:
+                return None
 
 
     class Status:
@@ -106,6 +134,12 @@ class Solver:
                 if self.pos[c] != board.destination(c):
                     return False
             return True
+
+        def get_color_from_position(self, pos):
+            for c in self.pos.keys():
+                if self.pos[c] == pos:
+                    return c
+            return None
 
         def __eq__(self, o):
             if self.colors() != o.colors():
@@ -140,11 +174,11 @@ class Solver:
                     color = grid[1]
                     facing = grid[0]
                     init_status.set(color, (i, j), facing)
-                elif grid[0] == 'O': # portal
+                elif grid[0] == PORTAL: # portal
                     self.board.set(i, j, grid)
-                elif grid[0] == 'D': # destination
+                elif grid[0] == DESTINATION_PREFIX: # destination
                     self.board.set(i, j, grid)
-                elif grid[0] == 'C': # face changer
+                elif grid[0] == CHANGER_PREFIX: # face changer
                     self.board.set(i, j, grid)
                 else:
                     assert False # Should not come here
@@ -160,35 +194,53 @@ class Solver:
         self.path = {}
         self.path[init_status] = ""
 
+    def _push_forward(self, color, towards, original_status, new_status):
+        # If there are other blocks on the way of the block we want to push, all of them will be pushed forward one step.
+        # So we first need to find out all the blocks will be push forward, put them into a stack
+
+        velocity = VELOCITIES[towards]
+        pos = original_status.position(color)
+        facing = original_status.facing(color)
+
+        target_pos = (pos[0] + velocity[0], pos[1] + velocity[1])
+
+        if 0 <= target_pos[0] < 5 and 0 <= target_pos[1] < 5:
+            if self.board.is_portal(target_pos): # Teleport if meets portal
+                other_portal = self.board.get_another_portal(target_pos)
+                target_pos = (other_portal[0] + velocity[0], other_portal[1] + velocity[1])
+
+            if original_status.get_color_from_position(target_pos): # there is a preceding block
+                preceding_exist = True
+                preceding_color = original_status.get_color_from_position(target_pos)
+                preceding_removed = self._push_forward(preceding_color, towards, original_status, new_status)
+            else: # nothing in the way
+                preceding_exist = False
+
+            if not preceding_exist or preceding_exist and preceding_removed: # removed obstacles, now can move me
+                # see if facing changed
+                new_facing = self.board.get_facing_change_by_position(target_pos) or facing
+                new_status.set(color, target_pos, new_facing)
+                return True
+            else: # preceding failed, unmove
+                new_status.set(color, pos, facing)
+                return False
+        else: # out of bound, unmove.
+            new_status.set(color, pos, facing)
+            return False
+
     def _move(self, status, color):
         pos = status.position(color)
         facing = status.facing(color)
 
-        move_velocity_map = {
-            'N': (-1, 0),
-            'E': (0, 1),
-            'W': (0, -1),
-            'S': (1, 0)
-        }
-        move_velocity = move_velocity_map[facing]
-
-        if 0 <= pos[0] + move_velocity[0] < 5 and 0 <= pos[1] + move_velocity[1] < 5:
-            new_pos = (pos[0] + move_velocity[0], pos[1] + move_velocity[1])
-        else:
-            new_pos = (pos[0], pos[1])
         new_status = self.Status()
-        new_status.set(color, new_pos, facing)
+        self._push_forward(color, facing, status, new_status)
+
+        # copy all the unmoved blocks
         for c in status.colors():
-            if c != color:
+            if c not in new_status.colors():
                 new_status.set(c, status.position(c), status.facing(c))
 
-
-        # If there are other blocks on the way of the block we want to push, all of them will be pushed forward one step.
-        # (TODO):So we first need to find out all the blocks will be push forward, put them into a stack
-
-
-        # (TODO):move these blocks one by one, in reversed order.
-        return new_status # (TODO): replace mock impl
+        return new_status
 
     def solve(self):
         while not self.q.empty():
@@ -211,5 +263,6 @@ if __name__ == '__main__':
         board = [map(lambda x:x.strip().upper(), f.readline().split(',')) for i in range(5)]
         solver = Solver(board)
 
-        print solver.solve()
+        solution = solver.solve()
+        print ' '.join(re.findall('\w{1,4}', solution))
 
