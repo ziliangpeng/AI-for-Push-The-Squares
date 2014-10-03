@@ -18,7 +18,8 @@ import re
     - Destination block is a grid on the board, and has a color
     - Users are expected to move blocks to destinations with the same color
     - In each move, a user can choose a color, and the color block will move 1 step towards its facing direction
-    - (**NEW**) Starting from level 27, the rule change that blocks of same color will move simultaneously, thus program needs to be adjust. 
+    - (**NEW 0.2**) Starting from level 27, the rule change that blocks of same color will move simultaneously, thus program needs to be adjust.
+
 
     - Portal: are grid that transit blocks, when a block enter a portal grid, it will come out from another portal grid
     - Direction changer: a grid that has a direction, when a block enters a changer grid, the block's facing direction changes
@@ -46,6 +47,9 @@ import re
     - You can't move a block out of the board. If the edge is on the way, the block stays unmoved.
     - In a chain of moving (block pushes preceding blocks forward), if the forward most block can not move, the whole chain can not move.
     - The forward most block may be pushed into a portal. It should be correctly teleported to the other portal.
+
+    - (**NEW 0.2**) If a block is pushed as a chain, not the mover, the other one with same color will not move, thus the push chain will not grow into a tree.
+    - (**NEW 0.2**) if one block is obstacled, the other block of the same color can still move.
 """
 
 PORTAL = 'O'
