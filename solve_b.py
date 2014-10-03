@@ -18,6 +18,7 @@ import re
     - Destination block is a grid on the board, and has a color
     - Users are expected to move blocks to destinations with the same color
     - In each move, a user can choose a color, and the color block will move 1 step towards its facing direction
+    - (**NEW**) Starting from level 27, the rule change that blocks of same color will move simultaneously, thus program needs to be adjust. 
 
     - Portal: are grid that transit blocks, when a block enter a portal grid, it will come out from another portal grid
     - Direction changer: a grid that has a direction, when a block enters a changer grid, the block's facing direction changes
@@ -25,7 +26,7 @@ import re
     ## Assumptions:
 
     - board size is 5x5
-    - 1 block and 1 destination for each color
+    - There can be several blocks and several destinations of a color, but the number should match
     - 0 or 2 portal
 
     ## possible grids:
