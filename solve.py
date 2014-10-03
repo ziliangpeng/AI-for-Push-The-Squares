@@ -29,6 +29,16 @@ from Queue import Queue
     - DB: (D)estination for (B)lue block. color can be any color.
     - CS: (C)hange facing to (S)outh, facing can be NEWS.
     - (empty string): empty grid
+
+    ## Approach
+
+    For each state, just enumerate possible move (pick a color to move), and does a breadth-first search.
+
+    ## Tricks:
+
+    - You can't move a block out of the board. If the edge is on the way, the block stays unmoved.
+    - In a chain of moving (block pushes preceding blocks forward), if the forward most block can not move, the whole chain can not move.
+    - The forward most block may be pushed into a portal. It should be correctly teleported to the other portal.
 """
 
 PORTAL = 'O'
@@ -75,21 +85,43 @@ class Solver:
 
         def __init__(self):
             self.pos = {}
-            self.facing = {}
+            self.facing_map = {}
 
         def set(self, color, pos, facing):
             assert color not in self.pos
             self.pos[color] = pos
-            self.facing[color] = facing
+            self.facing_map[color] = facing
 
         def colors(self):
             return set(self.pos.keys())
+
+        def facing(self, c):
+            return self.facing_map[c]
+
+        def position(self, c):
+            return self.pos[c]
 
         def finished(self, board):
             for c in self.colors():
                 if self.pos[c] != board.destination(c):
                     return False
             return True
+
+        def __eq__(self, o):
+            if self.colors() != o.colors():
+                return False
+            for c in self.colors():
+                if self.position(c) != o.position(c):
+                    return False
+                if self.facing(c) != o.facing(c):
+                    return False
+            return True
+
+        def __hash__(self):
+            v = 7
+            for c in self.colors():
+                v = (v << 3) ^ hash(self.position(c)) + (hash(self.facing(c)) << 1)
+            return v
 
 
     def __init__(self, board):
@@ -129,7 +161,34 @@ class Solver:
         self.path[init_status] = ""
 
     def _move(self, status, color):
-        return status # (TODO): replace mock impl
+        pos = status.position(color)
+        facing = status.facing(color)
+
+        move_velocity_map = {
+            'N': (-1, 0),
+            'E': (0, 1),
+            'W': (0, -1),
+            'S': (1, 0)
+        }
+        move_velocity = move_velocity_map[facing]
+
+        if 0 <= pos[0] + move_velocity[0] < 5 and 0 <= pos[1] + move_velocity[1] < 5:
+            new_pos = (pos[0] + move_velocity[0], pos[1] + move_velocity[1])
+        else:
+            new_pos = (pos[0], pos[1])
+        new_status = self.Status()
+        new_status.set(color, new_pos, facing)
+        for c in status.colors():
+            if c != color:
+                new_status.set(c, status.position(c), status.facing(c))
+
+
+        # If there are other blocks on the way of the block we want to push, all of them will be pushed forward one step.
+        # (TODO):So we first need to find out all the blocks will be push forward, put them into a stack
+
+
+        # (TODO):move these blocks one by one, in reversed order.
+        return new_status # (TODO): replace mock impl
 
     def solve(self):
         while not self.q.empty():
@@ -152,5 +211,5 @@ if __name__ == '__main__':
         board = [map(lambda x:x.strip().upper(), f.readline().split(',')) for i in range(5)]
         solver = Solver(board)
 
-        solver.solve()
+        print solver.solve()
 
