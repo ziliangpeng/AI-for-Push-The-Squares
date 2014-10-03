@@ -1,3 +1,8 @@
+"""
+    Author: Ziliang Peng
+    Date: 03 Oct, 2014
+"""
+
 import sys
 import string
 from Queue import Queue
