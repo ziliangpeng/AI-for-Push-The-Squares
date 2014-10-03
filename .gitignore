@@ -52,3 +52,11 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Vim temp files
+*.swo
+*.swp
+
+# game data
+*.pz
+
