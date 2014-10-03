@@ -67,6 +67,9 @@ class Solver:
         def colors(self):
             return set(self.destinations.keys())
 
+        def destination(self, c):
+            return self.destinations[c]
+
 
     class Status:
 
@@ -83,7 +86,10 @@ class Solver:
             return set(self.pos.keys())
 
         def finished(self, board):
-            return False # (TODO): replace mock impl
+            for c in self.colors():
+                if self.pos[c] != board.destination(c):
+                    return False
+            return True
 
 
     def __init__(self, board):
@@ -128,7 +134,7 @@ class Solver:
     def solve(self):
         while not self.q.empty():
             status = self.q.get()
-            if status.finished(board):
+            if status.finished(self.board):
                 return self.path[status]
             else:
                 for next_move_color in status.colors():
