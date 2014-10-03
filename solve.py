@@ -1,5 +1,6 @@
 import sys
 import string
+from Queue import Queue
 
 """
     # version 0.1
@@ -32,6 +33,9 @@ import string
 
 PORTAL = 'O'
 DIRECTIONS = 'NEWS'
+
+class UnsolvableError(Exception):
+    pass
 
 class Solver:
 
@@ -78,8 +82,8 @@ class Solver:
         def colors(self):
             return set(self.pos.keys())
 
-        def match_board(self, board):
-            return board.colors() == self.colors()
+        def finished(self, board):
+            return False # (TODO): replace mock impl
 
 
     def __init__(self, board):
@@ -92,7 +96,9 @@ class Solver:
         for i in range(5):
             for j in range(5):
                 grid = board[i][j]
-                if grid[0] in DIRECTIONS: # a color block
+                if grid == '': # empty block
+                    pass
+                elif grid[0] in DIRECTIONS: # a color block
                     color = grid[1]
                     facing = grid[0]
                     init_status.set(color, (i, j), facing)
@@ -102,16 +108,43 @@ class Solver:
                     self.board.set(i, j, grid)
                 elif grid[0] == 'C': # face changer
                     self.board.set(i, j, grid)
-                elif grid[0] == '': # empty block
-                    pass
                 else:
                     assert False # Should not come here
 
-        assert init_status.match_board(self.board)
+        assert init_status.colors() == self.board.colors()
+
+        self.q = Queue()
+        self.q.put(init_status)
+
+        self.visited = set()
+        self.visited.add(init_status)
+
+        self.path = {}
+        self.path[init_status] = ""
+
+    def _move(self, status, color):
+        return status # (TODO): replace mock impl
+
+    def solve(self):
+        while not self.q.empty():
+            status = self.q.get()
+            if status.finished(board):
+                return self.path[status]
+            else:
+                for next_move_color in status.colors():
+                    new_status = self._move(status, next_move_color)
+                    if new_status not in self.visited:
+                        self.q.put(new_status)
+                        self.visited.add(new_status)
+                        self.path[new_status] = self.path[status] + next_move_color
+
+        raise UnsolvableError()
 
 
 if __name__ == '__main__':
     with open(sys.argv[1], 'r') as f:
         board = [map(lambda x:x.strip().upper(), f.readline().split(',')) for i in range(5)]
         solver = Solver(board)
+
+        solver.solve()
 
