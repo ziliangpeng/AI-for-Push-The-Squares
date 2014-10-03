@@ -20,6 +20,14 @@ import string
     - board size is 5x5
     - 1 block and 1 destination for each color
     - 0 or 2 portal
+
+    ## possible grids:
+
+    - SB: Facing (S)outh, (B)lue color block. Facing can be NEWS, and color can be any color
+    - O: Portal
+    - DB: (D)estination for (B)lue block. color can be any color.
+    - CS: (C)hange facing to (S)outh, facing can be NEWS.
+    - (empty string): empty grid
 """
 
 PORTAL = 'O'
@@ -29,13 +37,13 @@ class Solver:
 
     class Board:
         def __init__(self):
-            self.board = [['.' for j in range(5)] for i in range(5)]
+            self.board = [['' for j in range(5)] for i in range(5)]
             self.destinations = {}
             self.portals = []
             self.changer = []
 
         def set(self, i, j, thing):
-            assert self.board[i][j] == '.' # cannot set twice
+            assert self.board[i][j] == '' # cannot set twice
             self.board[i][j] = thing
             if thing[0] == 'D': # A destination
                 color = thing[1]
@@ -94,7 +102,7 @@ class Solver:
                     self.board.set(i, j, grid)
                 elif grid[0] == 'C': # face changer
                     self.board.set(i, j, grid)
-                elif grid[0] == '.': # empty block
+                elif grid[0] == '': # empty block
                     pass
                 else:
                     assert False # Should not come here
