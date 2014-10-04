@@ -59,6 +59,7 @@ PORTAL = 'O'
 DIRECTIONS = 'NEWS'
 CHANGER_PREFIX = 'C'
 DESTINATION_PREFIX = 'D'
+OBSTACLE = 'X'
 
 VELOCITIES = {
             'N': (-1, 0),
@@ -79,6 +80,7 @@ class Solver:
             self.board = [['.' for j in range(5)] for i in range(5)]
             self.destinations_map = defaultdict(list)
             self.portals = []
+            self.obstacles = []
             self.changer = []
 
         def set(self, i, j, thing):
@@ -89,6 +91,8 @@ class Solver:
                 self.destinations_map[color].append((i, j))
             elif thing[0] == PORTAL:
                 self.portals.append((i, j))
+            elif thing[0] == OBSTACLE:
+                self.obstacles.append((i, j))
             elif thing[0] == CHANGER_PREFIX:
                 self.changer.append((i, j, thing[1]))
             else:
@@ -105,6 +109,9 @@ class Solver:
 
         def is_portal(self, pos):
             return self.board[pos[0]][pos[1]] == PORTAL
+
+        def is_obstacle(self, pos):
+            return self.board[pos[0]][pos[1]] == OBSTACLE
 
         def get_another_portal(self, pos):
             if pos not in self.portals:
@@ -189,6 +196,8 @@ class Solver:
                     init_status.set(color, (i, j), facing)
                 elif grid[0] == PORTAL: # portal
                     self.board.set(i, j, grid)
+                elif grid[0] == OBSTACLE: # obstacle
+                    self.board.set(i, j, grid)
                 elif grid[0] == DESTINATION_PREFIX: # destination
                     self.board.set(i, j, grid)
                 elif grid[0] == CHANGER_PREFIX: # face changer
@@ -233,6 +242,9 @@ class Solver:
             if original_status.get_color_from_position(target_pos): # there is a preceding block
                 preceding_exist = True
                 preceding_removed = self._push_forward(target_pos, towards, original_status, new_status, pos_in_chain)
+            elif self.board.is_obstacle(target_pos): # there is an obstacle
+                preceding_exist = True
+                preceding_removed = False
             else: # nothing in the way
                 preceding_exist = False
 
