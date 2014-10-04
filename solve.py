@@ -7,6 +7,7 @@ import sys
 import string
 from Queue import Queue
 import re
+from collections import defaultdict
 
 """
     # version 0.2
@@ -74,7 +75,7 @@ class Solver:
             # In input, empty are '' for faster key-typing, in Board representation empty is '.' for better index handling.
             # (TODO): This hack may be fixed after project is finished
             self.board = [['.' for j in range(5)] for i in range(5)]
-            self.destinations = {}
+            self.destinations_map = defaultdict(list)
             self.portals = []
             self.changer = []
 
@@ -83,8 +84,7 @@ class Solver:
             self.board[i][j] = thing
             if thing[0] == DESTINATION_PREFIX: # A destination
                 color = thing[1]
-                assert color not in self.destinations
-                self.destinations[color] = (i, j)
+                self.destinations_map[color].append((i, j))
             elif thing[0] == PORTAL:
                 self.portals.append((i, j))
             elif thing[0] == CHANGER_PREFIX:
@@ -96,10 +96,10 @@ class Solver:
             return self.board[i][j]
 
         def colors(self):
-            return set(self.destinations.keys())
+            return set(self.destinations_map.keys())
 
-        def destination(self, c):
-            return self.destinations[c]
+        def destinations(self, c):
+            return set(self.destinations_map[c])
 
         def is_portal(self, pos):
             return self.board[pos[0]][pos[1]] == PORTAL
@@ -122,32 +122,31 @@ class Solver:
     class Status:
 
         def __init__(self):
-            self.pos = {}
-            self.facing_map = {}
+            self.pos = defaultdict(list)
+            self.facing_map = {} # since there are several blocks of a color, this changes to map pos -> facing
 
         def set(self, color, pos, facing):
-            assert color not in self.pos
-            self.pos[color] = pos
-            self.facing_map[color] = facing
+            self.pos[color].append(pos)
+            self.facing_map[pos] = facing
 
         def colors(self):
             return set(self.pos.keys())
 
-        def facing(self, c):
-            return self.facing_map[c]
+        def facing(self, pos):
+            return self.facing_map[pos]
 
-        def position(self, c):
-            return self.pos[c]
+        def positions(self, c):
+            return set(self.pos[c])
 
         def finished(self, board):
             for c in self.colors():
-                if self.pos[c] != board.destination(c):
+                if self.positions(c) != board.destinations(c):
                     return False
             return True
 
         def get_color_from_position(self, pos):
             for c in self.pos.keys():
-                if self.pos[c] == pos:
+                if pos in self.positions(c):
                     return c
             return None
 
@@ -155,16 +154,18 @@ class Solver:
             if self.colors() != o.colors():
                 return False
             for c in self.colors():
-                if self.position(c) != o.position(c):
+                if self.positions(c) != o.positions(c):
                     return False
-                if self.facing(c) != o.facing(c):
-                    return False
+                for pos in self.positions(c):
+                    if self.facing(pos) != o.facing(pos):
+                        return False
             return True
 
         def __hash__(self):
             v = 7
             for c in self.colors():
-                v = (v << 3) ^ hash(self.position(c)) + (hash(self.facing(c)) << 1)
+                for pos in sorted(self.positions(c)):
+                    v = (v << 3) ^ hash(pos) + (hash(self.facing(pos)) << 1)
             return v
 
 
@@ -209,16 +210,16 @@ class Solver:
             return False
         return True
 
-    def _push_forward(self, color, towards, original_status, new_status, colors_in_chain):
-        if color in colors_in_chain:
+    def _push_forward(self, pos, towards, original_status, new_status, pos_in_chain):
+        if pos in pos_in_chain:
             return False # dead loop detected
-        colors_in_chain.add(color)
+        pos_in_chain.add(pos)
         # If there are other blocks on the way of the block we want to push, all of them will be pushed forward one step.
         # So we first need to find out all the blocks will be push forward, put them into a stack
 
         velocity = VELOCITIES[towards]
-        pos = original_status.position(color)
-        facing = original_status.facing(color)
+        color = original_status.get_color_from_position(pos)
+        facing = original_status.facing(pos)
 
         target_pos = (pos[0] + velocity[0], pos[1] + velocity[1])
 
@@ -229,8 +230,7 @@ class Solver:
 
             if original_status.get_color_from_position(target_pos): # there is a preceding block
                 preceding_exist = True
-                preceding_color = original_status.get_color_from_position(target_pos)
-                preceding_removed = self._push_forward(preceding_color, towards, original_status, new_status, colors_in_chain)
+                preceding_removed = self._push_forward(target_pos, towards, original_status, new_status, pos_in_chain)
             else: # nothing in the way
                 preceding_exist = False
 
@@ -247,17 +247,23 @@ class Solver:
             return False
 
     def _move(self, status, color):
-        pos = status.position(color)
-        facing = status.facing(color)
-
+        positions = status.positions(color)
         new_status = self.Status()
-        colors_in_chain = set()
-        self._push_forward(color, facing, status, new_status, colors_in_chain)
+        pos_in_chain = set()
+
+        # (HACK): This version (0.2) push the blocks one by one, with the assumption that no 2 blocks will be interested in pushing a same block.
+        # This may break with some data, but because its uncertain what the rule is for those situations, the algorithm just leave it for now.
+        # This will be fixed if it ever breaks.
+        for pos in positions:
+            if pos not in pos_in_chain:
+                facing = status.facing(pos)
+                self._push_forward(pos, facing, status, new_status, pos_in_chain)
 
         # copy all the unmoved blocks
         for c in status.colors():
-            if c not in new_status.colors():
-                new_status.set(c, status.position(c), status.facing(c))
+            for pos in status.positions(c):
+                if pos not in pos_in_chain:
+                    new_status.set(c, pos, status.facing(pos))
 
         return new_status
 
