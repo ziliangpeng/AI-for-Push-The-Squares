@@ -14,3 +14,8 @@
 - multiple blocks/destinations for a color (move simultaneously)
 - Program works on simple case, but works well thus far
 
+
+## 0.3
+
+- support exsitence of obstacles on the board
+
