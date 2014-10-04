@@ -10,7 +10,7 @@ import re
 from collections import defaultdict
 
 """
-    # version 0.4
+    # version 0.5
 
     ## Description
 
@@ -30,7 +30,7 @@ from collections import defaultdict
     ## Assumptions:
 
     - There can be several blocks and several destinations of a color, but the number should match
-    - 0 or 2 portal
+    - There can be multiple types of portals, 2 portals for each type.
 
     ## possible grids:
 
