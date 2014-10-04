@@ -74,14 +74,20 @@ class UnsolvableError(Exception):
 class Solver:
 
     class Board:
-        def __init__(self):
+        def __init__(self, board_size):
             # In input, empty are '' for faster key-typing, in Board representation empty is '.' for better index handling.
             # (TODO): This hack may be fixed after project is finished
-            self.board = [['.' for j in range(5)] for i in range(5)]
+            self.board = [['.' for j in range(board_size)] for i in range(board_size)]
             self.destinations_map = defaultdict(list)
             self.portals = []
             self.obstacles = []
             self.changer = []
+
+        def height(self):
+            return len(self.board)
+
+        def width(self):
+            return len(self.board[0])
 
         def set(self, i, j, thing):
             assert self.board[i][j] == '.' # cannot set twice
@@ -179,14 +185,13 @@ class Solver:
 
 
     def __init__(self, board):
-        assert len(board) == 5
-        assert len(board[0]) == len(board[1]) == len(board[2]) == len(board[3]) == len(board[4]) == 5
+        assert len(board[0]) == len(board[1]) == len(board[2]) == len(board[3]) == len(board[4])
 
         init_status = self.Status()
 
-        self.board = self.Board()
-        for i in range(5):
-            for j in range(5):
+        self.board = self.Board(len(board))
+        for i in range(len(board)):
+            for j in range(len(board[i])):
                 grid = board[i][j]
                 if grid == '': # empty block
                     pass
@@ -219,6 +224,9 @@ class Solver:
     def validate(self, board, status):
         if board.colors() != status.colors():
             return False
+        for c in board.colors():
+            if len(board.destinations(c)) != len(status.positions(c)):
+                return False
         return True
 
     def _push_forward(self, pos, towards, original_status, new_status, pos_in_chain):
@@ -234,7 +242,7 @@ class Solver:
 
         target_pos = (pos[0] + velocity[0], pos[1] + velocity[1])
 
-        if 0 <= target_pos[0] < 5 and 0 <= target_pos[1] < 5:
+        if 0 <= target_pos[0] < self.board.height() and 0 <= target_pos[1] < self.board.width():
             if self.board.is_portal(target_pos): # Teleport if meets portal
                 other_portal = self.board.get_another_portal(target_pos)
                 target_pos = (other_portal[0] + velocity[0], other_portal[1] + velocity[1])
@@ -299,7 +307,9 @@ class Solver:
 
 if __name__ == '__main__':
     with open(sys.argv[1], 'r') as f:
-        board = [map(lambda x:x.strip().upper(), f.readline().split(',')) for i in range(5)]
+        lines = f.readlines()
+
+        board = [map(lambda x:x.strip().upper(), line.split(',')) for line in lines][:-1] # omit the ending empty line
         solver = Solver(board)
 
         solution = solver.solve()
