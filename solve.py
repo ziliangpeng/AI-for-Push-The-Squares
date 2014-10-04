@@ -1,6 +1,6 @@
 """
     Author: Ziliang Peng
-    Date: 03 Oct, 2014
+    Date: 04 Oct, 2014
 """
 
 import sys
@@ -10,7 +10,7 @@ import re
 from collections import defaultdict
 
 """
-    # version 0.2
+    # version 0.3
 
     ## Description
 
@@ -20,6 +20,7 @@ from collections import defaultdict
     - Users are expected to move blocks to destinations with the same color
     - In each move, a user can choose a color, and the color block will move 1 step towards its facing direction
     - (**NEW 0.2**) Starting from level 27, the rule change that blocks of same color will move simultaneously, thus program needs to be adjust.
+    - (**NEW 0.3**) obstacles grid may exist on the board
 
 
     - Portal: are grid that transit blocks, when a block enter a portal grid, it will come out from another portal grid
@@ -38,6 +39,7 @@ from collections import defaultdict
     - DB: (D)estination for (B)lue block. color can be any color.
     - CS: (C)hange facing to (S)outh, facing can be NEWS.
     - (empty string): empty grid
+    - X: obstacles
 
     ## Approach
 
