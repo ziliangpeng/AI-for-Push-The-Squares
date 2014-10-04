@@ -55,7 +55,7 @@ from collections import defaultdict
     - (**NEW 0.2**) if one block is obstacled, the other block of the same color can still move.
 """
 
-PORTAL = 'O'
+PORTAL_PREFIX = 'O'
 DIRECTIONS = 'NEWS'
 CHANGER_PREFIX = 'C'
 DESTINATION_PREFIX = 'D'
@@ -79,7 +79,7 @@ class Solver:
             # (TODO): This hack may be fixed after project is finished
             self.board = [['.' for j in range(board_size)] for i in range(board_size)]
             self.destinations_map = defaultdict(list)
-            self.portals = []
+            self.portals = defaultdict(list)
             self.obstacles = []
             self.changer = []
 
@@ -95,8 +95,9 @@ class Solver:
             if thing[0] == DESTINATION_PREFIX: # A destination
                 color = thing[1]
                 self.destinations_map[color].append((i, j))
-            elif thing[0] == PORTAL:
-                self.portals.append((i, j))
+            elif thing[0] == PORTAL_PREFIX:
+                portal_name = thing[1:]
+                self.portals[portal_name].append((i, j))
             elif thing[0] == OBSTACLE:
                 self.obstacles.append((i, j))
             elif thing[0] == CHANGER_PREFIX:
@@ -114,17 +115,20 @@ class Solver:
             return set(self.destinations_map[c])
 
         def is_portal(self, pos):
-            return self.board[pos[0]][pos[1]] == PORTAL
+            return self.board[pos[0]][pos[1]][0] == PORTAL_PREFIX
 
         def is_obstacle(self, pos):
             return self.board[pos[0]][pos[1]] == OBSTACLE
 
         def get_another_portal(self, pos):
-            if pos not in self.portals:
-                raise ValueError()
-            for portal in self.portals:
-                if portal != pos:
-                    return portal
+            for portal_name in self.portals.keys():
+                portals = self.portals[portal_name]
+                if pos == portals[0]:
+                    return portals[1]
+                if pos == portals[1]:
+                    return portals[0]
+            
+            raise ValueError()
 
         def get_facing_change_by_position(self, pos):
             grid = self.board[pos[0]][pos[1]]
@@ -199,7 +203,7 @@ class Solver:
                     color = grid[1]
                     facing = grid[0]
                     init_status.set(color, (i, j), facing)
-                elif grid[0] == PORTAL: # portal
+                elif grid[0] == PORTAL_PREFIX: # portal
                     self.board.set(i, j, grid)
                 elif grid[0] == OBSTACLE: # obstacle
                     self.board.set(i, j, grid)
