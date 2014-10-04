@@ -193,7 +193,7 @@ class Solver:
                 else:
                     assert False # Should not come here
 
-        assert init_status.colors() == self.board.colors()
+        assert self.validate(self.board, init_status)
 
         self.q = Queue()
         self.q.put(init_status)
@@ -203,6 +203,11 @@ class Solver:
 
         self.path = {}
         self.path[init_status] = ""
+
+    def validate(self, board, status):
+        if board.colors() != status.colors():
+            return False
+        return True
 
     def _push_forward(self, color, towards, original_status, new_status, colors_in_chain):
         if color in colors_in_chain:
