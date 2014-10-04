@@ -10,7 +10,7 @@ import re
 from collections import defaultdict
 
 """
-    # version 0.3
+    # version 0.4
 
     ## Description
 
@@ -21,6 +21,7 @@ from collections import defaultdict
     - In each move, a user can choose a color, and the color block will move 1 step towards its facing direction
     - (**NEW 0.2**) Starting from level 27, the rule change that blocks of same color will move simultaneously, thus program needs to be adjust.
     - (**NEW 0.3**) obstacles grid may exist on the board
+    - (**NEW 0.4**) board size can be arbitrary
 
 
     - Portal: are grid that transit blocks, when a block enter a portal grid, it will come out from another portal grid
@@ -28,7 +29,6 @@ from collections import defaultdict
 
     ## Assumptions:
 
-    - board size is 5x5
     - There can be several blocks and several destinations of a color, but the number should match
     - 0 or 2 portal
 
