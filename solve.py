@@ -234,8 +234,8 @@ class Solver:
         return True
 
     def _push_forward(self, pos, towards, original_status, new_status, pos_in_chain):
-        if pos in pos_in_chain:
-            return False # dead loop detected
+        if pos in pos_in_chain: # I can move it if it's in a loop. Actually I'm guaranteed to be able to.
+            return True
         pos_in_chain.add(pos)
         # If there are other blocks on the way of the block we want to push, all of them will be pushed forward one step.
         # So we first need to find out all the blocks will be push forward, put them into a stack
