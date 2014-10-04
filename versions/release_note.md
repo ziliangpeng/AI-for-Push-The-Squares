@@ -19,3 +19,8 @@
 
 - support exsitence of obstacles on the board
 
+
+## 0.4 
+
+- support arbitrary size board
+
