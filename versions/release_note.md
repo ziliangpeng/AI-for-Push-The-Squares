@@ -24,3 +24,8 @@
 
 - support arbitrary size board
 
+
+## 0.5
+
+- support more than one portal type.
+
