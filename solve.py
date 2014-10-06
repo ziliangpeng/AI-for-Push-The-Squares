@@ -233,7 +233,7 @@ class Solver:
                 return False
         return True
 
-    def _push_forward(self, pos, towards, original_status, new_status, pos_in_chain):
+    def _push_forward(self, pos, towards, original_status, new_status, pos_in_chain, pushed_grids, original_color):
         if pos in pos_in_chain: # I can move it if it's in a loop. Actually I'm guaranteed to be able to.
             return True
         pos_in_chain.add(pos)
@@ -251,9 +251,20 @@ class Solver:
                 other_portal = self.board.get_another_portal(target_pos)
                 target_pos = (other_portal[0] + velocity[0], other_portal[1] + velocity[1])
 
-            if original_status.get_color_from_position(target_pos): # there is a preceding block
+            if original_status.get_color_from_position(target_pos) and \
+                original_status.get_color_from_position(target_pos) not in pushed_grids: # there is a preceding block, and not already moved
                 preceding_exist = True
-                preceding_removed = self._push_forward(target_pos, towards, original_status, new_status, pos_in_chain)
+
+                # to fix #5, if a block of the same color in the chain wants to move to a different direction, let it.
+                if original_status.get_color_from_position(target_pos) == color:
+                    new_towards = original_status.facing(target_pos)
+                else:
+                    new_towards = towards
+                # but of course the new direction can't be opposite of the original direction.
+                if (VELOCITIES[towards][0] + VELOCITIES[new_towards][0], VELOCITIES[towards][1] + VELOCITIES[new_towards][1]) == (0, 0):
+                    preceding_removed = False
+                else:
+                    preceding_removed = self._push_forward(target_pos, new_towards, original_status, new_status, pos_in_chain, pushed_grids, original_color)
             elif self.board.is_obstacle(target_pos): # there is an obstacle
                 preceding_exist = True
                 preceding_removed = False
@@ -264,6 +275,7 @@ class Solver:
                 # see if facing changed
                 new_facing = self.board.get_facing_change_by_position(target_pos) or facing
                 new_status.set(color, target_pos, new_facing)
+                pushed_grids.add(pos)
                 return True
             else: # preceding failed, unmove
                 new_status.set(color, pos, facing)
@@ -276,6 +288,7 @@ class Solver:
         positions = status.positions(color)
         new_status = self.Status()
         pos_in_chain = set()
+        pushed_grids = set() # to fix #1
 
         # (HACK): This version (0.2) push the blocks one by one, with the assumption that no 2 blocks will be interested in pushing a same block.
         # This may break with some data, but because its uncertain what the rule is for those situations, the algorithm just leave it for now.
@@ -283,7 +296,7 @@ class Solver:
         for pos in positions:
             if pos not in pos_in_chain:
                 facing = status.facing(pos)
-                self._push_forward(pos, facing, status, new_status, pos_in_chain)
+                self._push_forward(pos, facing, status, new_status, pos_in_chain, pushed_grids, color)
 
         # copy all the unmoved blocks
         for c in status.colors():
