@@ -29,3 +29,8 @@
 
 - support more than one portal type.
 
+
+## 0.51
+
+- fixed iss#1 and iss#5
+
