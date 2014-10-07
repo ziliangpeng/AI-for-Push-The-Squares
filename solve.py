@@ -10,7 +10,7 @@ import re
 from collections import defaultdict
 
 """
-    # version 0.51
+    # version 0.6
 
     ## Description
 
@@ -22,6 +22,8 @@ from collections import defaultdict
     - (**NEW 0.2**) Starting from level 27, the rule change that blocks of same color will move simultaneously, thus program needs to be adjust.
     - (**NEW 0.3**) obstacles grid may exist on the board
     - (**NEW 0.4**) board size can be arbitrary
+    - (**NEW 0.6**) a new grid introduced that will change block's color
+
 
 
     - Portal: are grid that transit blocks, when a block enter a portal grid, it will come out from another portal grid
@@ -40,6 +42,7 @@ from collections import defaultdict
     - CS: (C)hange facing to (S)outh, facing can be NEWS.
     - (empty string): empty grid
     - X: obstacles
+    - PB: (P)aint the passer-by block to (B)lue, color can be any color.
 
     ## Approach
 
@@ -60,6 +63,7 @@ DIRECTIONS = 'NEWS'
 CHANGER_PREFIX = 'C'
 DESTINATION_PREFIX = 'D'
 OBSTACLE = 'X'
+PAINTER_PREFIX = 'P'
 
 VELOCITIES = {
             'N': (-1, 0),
@@ -81,7 +85,8 @@ class Solver:
             self.destinations_map = defaultdict(list)
             self.portals = defaultdict(list)
             self.obstacles = []
-            self.changer = []
+            self.changers = []
+            self.painters = []
 
         def height(self):
             return len(self.board)
@@ -101,7 +106,9 @@ class Solver:
             elif thing[0] == OBSTACLE:
                 self.obstacles.append((i, j))
             elif thing[0] == CHANGER_PREFIX:
-                self.changer.append((i, j, thing[1]))
+                self.changers.append((i, j, thing[1]))
+            elif thing[0] == PAINTER_PREFIX:
+                self.painters.append((i, j, thing[1:]))
             else:
                 assert False # should not come here
 
@@ -134,6 +141,13 @@ class Solver:
             grid = self.board[pos[0]][pos[1]]
             if grid[0] == CHANGER_PREFIX:
                 return grid[1]
+            else:
+                return None
+
+        def get_painted_color_by_position(self, pos):
+            grid = self.board[pos[0]][pos[1]]
+            if grid[0] == PAINTER_PREFIX:
+                return grid[1:]
             else:
                 return None
 
@@ -211,10 +225,13 @@ class Solver:
                     self.board.set(i, j, grid)
                 elif grid[0] == CHANGER_PREFIX: # face changer
                     self.board.set(i, j, grid)
+                elif grid[0] == PAINTER_PREFIX: # painter grid
+                    self.board.set(i, j, grid)
                 else:
                     assert False # Should not come here
 
-        assert self.validate(self.board, init_status)
+        # assert self.validate(self.board, init_status)
+        # (TODO): Since color can change, not validating any more for now. Will come up with another valid validation.
 
         self.q = Queue()
         self.q.put(init_status)
@@ -274,7 +291,8 @@ class Solver:
             if not preceding_exist or preceding_exist and preceding_removed: # removed obstacles, now can move me
                 # see if facing changed
                 new_facing = self.board.get_facing_change_by_position(target_pos) or facing
-                new_status.set(color, target_pos, new_facing)
+                new_color = self.board.get_painted_color_by_position(target_pos) or color
+                new_status.set(new_color, target_pos, new_facing)
                 pushed_grids.add(pos)
                 return True
             else: # preceding failed, unmove
