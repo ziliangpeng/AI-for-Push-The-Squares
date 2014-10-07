@@ -322,13 +322,14 @@ class Solver:
         raise UnsolvableError()
 
 
-if __name__ == '__main__':
-    with open(sys.argv[1], 'r') as f:
+def read_board(filename):
+    with open(filename, 'r') as f:
         lines = f.readlines()
+        return [map(lambda x:x.strip().upper(), line.split(',')) for line in lines][:-1] # omit the ending empty line
 
-        board = [map(lambda x:x.strip().upper(), line.split(',')) for line in lines][:-1] # omit the ending empty line
-        solver = Solver(board)
 
+if __name__ == '__main__':
+        solver = Solver(read_board(sys.argv[1]))
         solution = solver.solve()
         print ' '.join(re.findall('\w{1,4}', solution))
 
